@@ -1,0 +1,64 @@
+---
+- name: Install Python and pip
+  ansible.builtin.apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+    state: present
+    update_cache: true
+
+- name: Create virtual environment
+  ansible.builtin.command:
+    cmd: python3 -m venv {{ fastapi_app_dir }}/venv
+    creates: "{{ fastapi_app_dir }}/venv"
+  become: true
+  become_user: "{{ fastapi_user }}"
+
+- name: Install FastAPI and Uvicorn in venv
+  ansible.builtin.pip:
+    name:
+      - fastapi
+      - uvicorn
+    virtualenv: "{{ fastapi_app_dir }}/venv"
+    virtualenv_command: python3 -m venv
+
+- name: Ensure FastAPI app directory exists
+  ansible.builtin.file:
+    path: "{{ fastapi_app_dir }}"
+    state: directory
+    owner: "{{ fastapi_user }}"
+    group: "{{ fastapi_user }}"
+    mode: '0755'
+
+
+- name: Deploy placeholder FastAPI app
+  ansible.builtin.copy:
+    dest: "{{ fastapi_app_dir }}/main.py"
+    content: |
+      from fastapi import FastAPI
+
+      app = FastAPI()
+
+      @app.get("/")
+      def read_root():
+          return {"Hello": "World from FastAPI via Ansible!"}
+    owner: "{{ fastapi_user }}"
+    group: "{{ fastapi_user }}"
+    mode: '0644'
+
+- name: Deploy FastAPI systemd service
+  ansible.builtin.template:
+    src: fastapi.service.j2
+    dest: /etc/systemd/system/fastapi.service
+    mode: '0644'
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable and start FastAPI
+  ansible.builtin.systemd:
+    name: fastapi
+    enabled: true
+    state: started

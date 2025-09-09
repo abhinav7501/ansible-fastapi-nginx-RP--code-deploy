@@ -1,0 +1,14 @@
+- name: Setup FastAPI with Nginx
+  hosts: fastapi_servers
+  become: true
+  vars:
+    fastapi_user: ubuntu
+    fastapi_app_dir: /home/ubuntu/fastapi-app
+    python_path: /usr/bin/python3
+    fastapi_module: main
+    fastapi_app: app
+    fastapi_port: 8000
+
+  roles:
+    - fastapi
+    - nginx
